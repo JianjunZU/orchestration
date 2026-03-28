@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # ---- Infrastructure ----
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: orchestration
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,HOST://0.0.0.0:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      retries: 10
+
+  # ---- Dual-instance Backend ----
+  orchestration-instance-1:
+    build: ./orchestration-backend
+    ports:
+      - "8081:8080"
+    environment:
+      SERVER_PORT: 8080
+      INSTANCE_ID: instance-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: orchestration
+      DB_USER: root
+      DB_PASSWORD: root
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_SERVERS: kafka:29092
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  orchestration-instance-2:
+    build: ./orchestration-backend
+    ports:
+      - "8082:8080"
+    environment:
+      SERVER_PORT: 8080
+      INSTANCE_ID: instance-2
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: orchestration
+      DB_USER: root
+      DB_PASSWORD: root
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_SERVERS: kafka:29092
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ---- Frontend ----
+  orchestration-frontend:
+    build: ./orchestration-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - orchestration-instance-1
+      - orchestration-instance-2
+
+volumes:
+  mysql_data:
