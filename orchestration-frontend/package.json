@@ -1,0 +1,27 @@
+{
+  "name": "orchestration-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "bpmn-js": "^17.9.0",
+    "bpmn-js-properties-panel": "^5.17.0",
+    "@bpmn-io/properties-panel": "^3.21.0",
+    "camunda-bpmn-moddle": "^7.0.1",
+    "axios": "^1.7.2",
+    "vue": "^3.4.27",
+    "vue-router": "^4.3.2",
+    "pinia": "^2.1.7",
+    "element-plus": "^2.7.3",
+    "@element-plus/icons-vue": "^2.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.2.11",
+    "sass": "^1.77.2"
+  }
+}

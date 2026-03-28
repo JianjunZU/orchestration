@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:flowable="http://flowable.org/bpmn"
+  targetNamespace="http://orchestration.com/process">
+
+  <message id="kafkaOrderMessage" name="kafka-order-received" />
+
+  <process id="sample-orchestration" name="订单处理编排流程" isExecutable="true">
+
+    <!-- Trigger: Kafka Message Start Event -->
+    <startEvent id="kafkaTrigger" name="Kafka订单触发">
+      <messageEventDefinition messageRef="kafkaOrderMessage" />
+    </startEvent>
+
+    <!-- Executor: HTTP call to validate order -->
+    <serviceTask id="httpValidator" name="HTTP订单校验"
+      flowable:delegateExpression="${executorDelegate}">
+      <extensionElements>
+        <flowable:field name="executorType" stringValue="HTTP" />
+        <flowable:field name="executorConfig">
+          <flowable:string>{"url":"http://order-service/api/validate","method":"POST","headers":{"Content-Type":"application/json"}}</flowable:string>
+        </flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <!-- Logic Controller: Condition check -->
+    <serviceTask id="amountCheck" name="金额判断"
+      flowable:delegateExpression="${logicControllerDelegate}">
+      <extensionElements>
+        <flowable:field name="logicType" stringValue="CONDITION" />
+        <flowable:field name="logicConfig">
+          <flowable:string>{"expression":"${amount > 1000}","resultVariable":"needApproval"}</flowable:string>
+        </flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <!-- Gateway -->
+    <exclusiveGateway id="approvalGateway" name="是否需要审批" />
+
+    <!-- Executor: Notify approval -->
+    <serviceTask id="notifyApproval" name="发送审批通知"
+      flowable:delegateExpression="${executorDelegate}">
+      <extensionElements>
+        <flowable:field name="executorType" stringValue="HTTP" />
+        <flowable:field name="executorConfig">
+          <flowable:string>{"url":"http://notify-service/api/send","method":"POST"}</flowable:string>
+        </flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <!-- Logic Controller: Data transform for direct processing -->
+    <serviceTask id="dataTransform" name="数据转换"
+      flowable:delegateExpression="${logicControllerDelegate}">
+      <extensionElements>
+        <flowable:field name="logicType" stringValue="DATA_TRANSFORM" />
+        <flowable:field name="logicConfig">
+          <flowable:string>{"mappings":{"orderData":"processedData"},"constants":{"status":"auto-approved"}}</flowable:string>
+        </flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <!-- Executor: Final processing -->
+    <serviceTask id="finalProcess" name="最终处理"
+      flowable:delegateExpression="${executorDelegate}">
+      <extensionElements>
+        <flowable:field name="executorType" stringValue="SCRIPT" />
+        <flowable:field name="executorConfig">
+          <flowable:string>{"language":"javascript","script":"var result = 'Order processed: ' + execution.getVariable('orderId'); result;"}</flowable:string>
+        </flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <endEvent id="end" name="结束" />
+
+    <!-- Sequence flows -->
+    <sequenceFlow id="flow1" sourceRef="kafkaTrigger" targetRef="httpValidator" />
+    <sequenceFlow id="flow2" sourceRef="httpValidator" targetRef="amountCheck" />
+    <sequenceFlow id="flow3" sourceRef="amountCheck" targetRef="approvalGateway" />
+    <sequenceFlow id="flow4" sourceRef="approvalGateway" targetRef="notifyApproval">
+      <conditionExpression>${needApproval == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow5" sourceRef="approvalGateway" targetRef="dataTransform">
+      <conditionExpression>${needApproval == false}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow6" sourceRef="notifyApproval" targetRef="finalProcess" />
+    <sequenceFlow id="flow7" sourceRef="dataTransform" targetRef="finalProcess" />
+    <sequenceFlow id="flow8" sourceRef="finalProcess" targetRef="end" />
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="sample-orchestration">
+      <bpmndi:BPMNShape id="S_kafkaTrigger" bpmnElement="kafkaTrigger">
+        <dc:Bounds x="100" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_httpValidator" bpmnElement="httpValidator">
+        <dc:Bounds x="200" y="178" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_amountCheck" bpmnElement="amountCheck">
+        <dc:Bounds x="370" y="178" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_approvalGateway" bpmnElement="approvalGateway" isMarkerVisible="true">
+        <dc:Bounds x="540" y="193" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_notifyApproval" bpmnElement="notifyApproval">
+        <dc:Bounds x="660" y="100" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_dataTransform" bpmnElement="dataTransform">
+        <dc:Bounds x="660" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_finalProcess" bpmnElement="finalProcess">
+        <dc:Bounds x="830" y="178" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_end" bpmnElement="end">
+        <dc:Bounds x="1000" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

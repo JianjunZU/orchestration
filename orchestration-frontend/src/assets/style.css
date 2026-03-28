@@ -1,0 +1,54 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', Arial, sans-serif;
+}
+
+#app {
+  height: 100%;
+}
+
+/* BPMN.js overrides */
+.bjs-powered-by {
+  display: none !important;
+}
+
+.djs-palette {
+  width: 48px !important;
+}
+
+.bpmn-designer-container {
+  display: flex;
+  height: calc(100vh - 120px);
+}
+
+.bpmn-canvas {
+  flex: 1;
+  position: relative;
+  background: #fafafa;
+}
+
+.bpmn-properties {
+  width: 360px;
+  border-left: 1px solid #e4e7ed;
+  background: #fff;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
