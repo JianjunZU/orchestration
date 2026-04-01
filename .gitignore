@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# Env
+.env
+.env.local
+
+# Logs
+*.log
+
+# Package lock files (frontend)
+orchestration-frontend/package-lock.json
